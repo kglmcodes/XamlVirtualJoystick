@@ -1,4 +1,5 @@
 ﻿using System;
+using static WpfCustomControls.OnScreenJoystick;
 
 namespace WpfCustomControls
 {
@@ -6,5 +7,6 @@ namespace WpfCustomControls
     {
         public double Angle { get; set; }
         public double Distance { get; set; }
+        public Direction Dir { get; set; }
     }
 }

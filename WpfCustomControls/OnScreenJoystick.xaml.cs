@@ -9,6 +9,26 @@ namespace WpfCustomControls
     /// <summary>Interaction logic for Joystick.xaml</summary>
     public partial class OnScreenJoystick : UserControl
     {
+        public enum Direction : byte
+        {
+            NONE,
+            UP,
+            UP_RIGHT,
+            RIGHT,
+            DOWN_RIGHT,
+            DOWN,
+            LEFT,
+            DOWN_LEFT,
+            UP_LEFT,
+            MAX = DOWN_RIGHT
+        }
+
+
+
+        // Using a DependencyProperty as the backing store for Dir.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty DirProperty =
+            DependencyProperty.Register("Dir", typeof(Direction), typeof(Direction), new PropertyMetadata(Direction.NONE));
+
         /// <summary>Current angle in degrees from 0 to 360</summary>
         public static readonly DependencyProperty AngleProperty =
             DependencyProperty.Register("Angle", typeof(double), typeof(OnScreenJoystick), null);
@@ -35,6 +55,13 @@ namespace WpfCustomControls
         {
             get { return Convert.ToDouble(GetValue(AngleProperty)); }
             private set { SetValue(AngleProperty, value); }
+        }
+
+        ///<summary>Current direction in Direction Enum</summary>
+        public Direction Dir
+        {
+            get { return (Direction)GetValue(DirProperty); }
+            set { SetValue(DirProperty, value); }
         }
 
         /// <summary>current distance (or "power"), from 0 to 100</summary>
@@ -93,6 +120,7 @@ namespace WpfCustomControls
 
         private Point _startPos;
         private double _prevAngle, _prevDistance;
+        private Direction _prevDir;
         private readonly Storyboard centerKnob;
 
         public OnScreenJoystick()
@@ -147,9 +175,45 @@ namespace WpfCustomControls
                     (!(Math.Abs(_prevAngle - angle) > AngleStep) && !(Math.Abs(_prevDistance - distance) > DistanceStep)))
                     return;
 
-                Moved?.Invoke(this, new VirtualJoystickEventArgs { Angle = Angle, Distance = Distance });
+                //Additional code for deciding the Direction of the waypoint
+                if (Angle > 337 || Angle <= 22)
+                {
+                    Dir = Direction.UP;
+                }
+                else if (Angle > 22 && Angle <= 68)
+                {
+                    Dir = Direction.UP_RIGHT;
+                }
+                else if (Angle > 68 && Angle <= 112)
+                {
+                    Dir = Direction.RIGHT;
+                }
+                else if (Angle > 112 && Angle <= 157)
+                {
+                    Dir = Direction.DOWN_RIGHT;
+                }
+                else if (Angle > 157 && Angle <= 202)
+                {
+                    Dir = Direction.DOWN;
+                }
+                else if (Angle > 202 && Angle <= 247)
+                {
+                    Dir = Direction.DOWN_LEFT;
+                }
+                else if (Angle > 247 && Angle <= 292)
+                {
+                    Dir = Direction.LEFT;
+                }
+                else if (Angle > 292 && Angle <= 337)
+                {
+                    Dir = Direction.UP_LEFT;
+                }
+
+                Moved?.Invoke(this, new VirtualJoystickEventArgs { Angle = Angle, Distance = Distance, Dir = Dir });
                 _prevAngle = Angle;
                 _prevDistance = Distance;
+                _prevDir = Dir;
+
             }
         }
 
