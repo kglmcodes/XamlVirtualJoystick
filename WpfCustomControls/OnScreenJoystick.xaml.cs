@@ -23,11 +23,11 @@ namespace WpfCustomControls
             MAX = DOWN_RIGHT
         }
 
-
+        double DesiredMaxDistance;
 
         // Using a DependencyProperty as the backing store for Dir.  This enables animation, styling, binding, etc...
         public static readonly DependencyProperty DirProperty =
-            DependencyProperty.Register("Dir", typeof(Direction), typeof(Direction), new PropertyMetadata(Direction.NONE));
+            DependencyProperty.Register("Dir", typeof(Direction), typeof(OnScreenJoystick), new PropertyMetadata(Direction.NONE));
 
         /// <summary>Current angle in degrees from 0 to 360</summary>
         public static readonly DependencyProperty AngleProperty =
@@ -127,11 +127,25 @@ namespace WpfCustomControls
         {
             InitializeComponent();
 
+            Knob.PreviewTouchDown += Knob_PreviewTouchDown;
+            Knob.PreviewTouchUp += Knob_PreviewTouchUp;
             Knob.MouseLeftButtonDown += Knob_MouseLeftButtonDown;
             Knob.MouseLeftButtonUp += Knob_MouseLeftButtonUp;
             Knob.MouseMove += Knob_MouseMove;
 
+            DesiredMaxDistance = base_ellipse.Height / 2;
+
             centerKnob = Knob.Resources["CenterKnob"] as Storyboard;
+        }
+
+        private void Knob_PreviewTouchUp(object sender, TouchEventArgs e)
+        {
+            e.TouchDevice.Capture(this);
+        }
+
+        private void Knob_PreviewTouchDown(object sender, TouchEventArgs e)
+        {
+            ReleaseAllTouchCaptures();
         }
 
         private void Knob_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -162,14 +176,25 @@ namespace WpfCustomControls
                 if (angle >= 360) angle -= 360;
             }
 
-            double distance = Math.Round(Math.Sqrt(deltaPos.X * deltaPos.X + deltaPos.Y * deltaPos.Y) / 135 * 100);
-            if (distance <= 100)
+            double distance = Math.Round(Math.Sqrt((deltaPos.X * deltaPos.X) + (deltaPos.Y * deltaPos.Y)) / 135 * 100);
+            if (true)
             {
                 Angle = angle;
-                Distance = distance;
+                Distance = distance <= 100 ? distance : 100;
 
-                knobPosition.X = deltaPos.X;
-                knobPosition.Y = deltaPos.Y;
+                if (distance <= 100)
+                {
+                    knobPosition.X = deltaPos.X;
+                    knobPosition.Y = deltaPos.Y;
+                }
+                else
+                {
+                    Point nearestInclusivePoint = GetNearestInclusivePoint(newPos);
+                    knobPosition.X = nearestInclusivePoint.X;
+                    knobPosition.Y = nearestInclusivePoint.Y;
+                }
+
+                Console.WriteLine($"deltaPos.X {deltaPos.X}\t\t\t deltaPos.Y {deltaPos.Y} \t\t\tellipse.ActualWidth {base_ellipse.ActualWidth} \t\t ellipse.ActualHeight {base_ellipse.ActualHeight} \t");
 
                 if (Moved == null ||
                     (!(Math.Abs(_prevAngle - angle) > AngleStep) && !(Math.Abs(_prevDistance - distance) > DistanceStep)))
@@ -213,7 +238,6 @@ namespace WpfCustomControls
                 _prevAngle = Angle;
                 _prevDistance = Distance;
                 _prevDir = Dir;
-
             }
         }
 
@@ -226,7 +250,21 @@ namespace WpfCustomControls
         private void centerKnob_Completed(object sender, EventArgs e)
         {
             Angle = Distance = _prevAngle = _prevDistance = 0;
+            _prevDir = Direction.NONE;
             Released?.Invoke(this);
+        }
+        private Point GetNearestInclusivePoint(Point mouse_loc)
+        {
+            var rAngle = -GetAngleInRadian(mouse_loc);
+            var nX = DesiredMaxDistance * Math.Cos(rAngle);
+            var nY = DesiredMaxDistance * Math.Sin(rAngle);
+            return new Point(nX, nY);
+        }
+        private double GetAngleInRadian(Point mouse_loc)
+        {
+            var xDiff = mouse_loc.X - _startPos.X;
+            var yDiff = mouse_loc.Y - _startPos.Y;
+            return -Math.Atan2(yDiff, xDiff);
         }
     }
 }
